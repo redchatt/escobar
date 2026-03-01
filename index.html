@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escobar Game - Real Logic</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #080808; color: #fff; text-align: center; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .box { width: 380px; padding: 30px; background: #111; border-radius: 25px; border: 1px solid #222; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        input { width: 90%; padding: 15px; margin: 15px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #27ae60; font-size: 22px; text-align: center; letter-spacing: 5px; outline: none; }
+        .btn { padding: 14px; background: #27ae60; border: none; color: white; cursor: pointer; border-radius: 12px; font-weight: bold; width: 100%; transition: 0.3s; }
+        .balance-label { color: #f1c40f; font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+        .arena { display: flex; justify-content: space-around; align-items: center; margin: 30px 0; }
+        .hand { font-size: 70px; transition: 0.2s; }
+        .shake { animation: shakeHand 0.4s ease-in-out 3; }
+        @keyframes shakeHand { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-25px); } }
+        .bet-row { display: flex; justify-content: space-between; margin: 15px 0; }
+        .btn-bet { background: #1a1a1a; border: 1px solid #333; color: #aaa; width: 30%; padding: 10px; border-radius: 8px; cursor: pointer; }
+        .btn-bet.active { border-color: #27ae60; color: #fff; background: #1e2a22; }
+        .choices { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .choice-btn { font-size: 35px; background: #1a1a1a; border: 1px solid #333; padding: 15px; border-radius: 50%; cursor: pointer; transition: 0.2s; }
+        .choice-btn:hover:not(:disabled) { transform: translateY(-5px); border-color: #27ae60; }
+        .choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { font-size: 20px; font-weight: bold; margin-top: 15px; min-height: 30px; }
+        #game-area { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="login-box" class="box">
+        <h2 style="color: #27ae60;">Escobar Game</h2>
+        <input type="text" id="access-code" maxlength="6" placeholder="000000">
+        <button class="btn" onclick="login()">DAXİL OL</button>
+    </div>
+
+    <div id="game-area" class="box">
+        <div class="balance-label" id="user-balance">0.00 ₼</div>
+        
+        <div class="bet-row">
+            <button class="btn-bet" id="bet02" onclick="setBet(0.20)">0.20 ₼</button>
+            <button class="btn-bet" id="bet05" onclick="setBet(0.50)">0.50 ₼</button>
+            <button class="btn-bet" id="bet10" onclick="setBet(1.00)">1.00 ₼</button>
+        </div>
+
+        <div class="arena">
+            <div><div id="user-hand" class="hand">✊</div></div>
+            <div style="font-size: 20px; color: #444;">VS</div>
+            <div><div id="bot-hand" class="hand">✊</div></div>
+        </div>
+
+        <div id="status">Seçimini et!</div>
+
+        <div class="choices">
+            <button class="choice-btn" onclick="play('daş')">✊</button>
+            <button class="choice-btn" onclick="play('kağız')">✋</button>
+            <button class="choice-btn" onclick="play('qayçı')">✌️</button>
+        </div>
+    </div>
+
+    <script>
+        let currentCode = null;
+        let activeBet = 0;
+        const emojiMap = { 'daş': '✊', 'kağız': '✋', 'qayçı': '✌️' };
+
+        function login() {
+            const code = document.getElementById('access-code').value;
+            let accounts = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            if(accounts[code]) {
+                currentCode = code;
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+                updateUI();
+            } else { alert("Kod səhvdir!"); }
+        }
+
+        function updateUI() {
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            document.getElementById('user-balance').innerText = accounts[currentCode].balance.toFixed(2) + " ₼";
+        }
+
+        function setBet(amt) {
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            if(accounts[currentCode].balance < amt) return alert("Balans yetmir!");
+            activeBet = amt;
+            document.querySelectorAll('.btn-bet').forEach(b => b.classList.remove('active'));
+            if(amt === 0.20) document.getElementById('bet02').classList.add('active');
+            if(amt === 0.50) document.getElementById('bet05').classList.add('active');
+            if(amt === 1.00) document.getElementById('bet10').classList.add('active');
+        }
+
+        function play(userChoice) {
+            if(activeBet === 0) return alert("Mərc seç!");
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            if(accounts[currentCode].balance < activeBet) return alert("Balans yetmir!");
+
+            document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+            const userHand = document.getElementById('user-hand');
+            const botHand = document.getElementById('bot-hand');
+            const status = document.getElementById('status');
+
+            userHand.innerText = "✊"; botHand.innerText = "✊";
+            userHand.classList.add('shake'); botHand.classList.add('shake');
+            status.innerText = "1... 2... 3...";
+
+            setTimeout(() => {
+                userHand.classList.remove('shake');
+                botHand.classList.remove('shake');
+
+                // MƏNTİQ BURADADIR:
+                let winChance = localStorage.getItem('win_chance') || 50;
+                let shouldWin = Math.random() * 100 < winChance;
+                let botChoice = "";
+
+                if (shouldWin) {
+                    // Botu qəsdən uduzdururuq
+                    if(userChoice === 'daş') botChoice = 'qayçı';
+                    else if(userChoice === 'kağız') botChoice = 'daş';
+                    else botChoice = 'kağız';
+                } else {
+                    // Botu qəsdən qazandırırıq (və ya heç-heçə)
+                    if(userChoice === 'daş') botChoice = 'kağız';
+                    else if(userChoice === 'kağız') botChoice = 'qayçı';
+                    else botChoice = 'daş';
+                }
+
+                // Ekranda göstər
+                userHand.innerText = emojiMap[userChoice];
+                botHand.innerText = emojiMap[botChoice];
+
+                // Hesabla
+                accounts[currentCode].balance -= activeBet;
+                
+                // Məntiqi yoxlama (Hər ehtimala qarşı botun seçiminə görə təmiz yoxlanış)
+                if (
+                    (userChoice === 'daş' && botChoice === 'qayçı') ||
+                    (userChoice === 'kağız' && botChoice === 'daş') ||
+                    (userChoice === 'qayçı' && botChoice === 'kağız')
+                ) {
+                    let prize = activeBet === 0.20 ? 0.50 : (activeBet === 0.50 ? 1.00 : 2.20);
+                    accounts[currentCode].balance += prize;
+                    status.innerText = `UDDUNUZ! +${prize}₼`;
+                    status.style.color = "#2ecc71";
+                } else {
+                    status.innerText = "UDUZDUNUZ!";
+                    status.style.color = "#e74c3c";
+                }
+
+                localStorage.setItem('game_accounts', JSON.stringify(accounts));
+                updateUI();
+                document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
