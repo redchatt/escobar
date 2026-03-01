@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <title>Escobar Admin - Control</title>
+    <style>
+        body { background: #050505; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .card { background: #111; padding: 20px; border-radius: 15px; border: 1px solid #222; max-width: 500px; margin: 20px auto; }
+        h2 { color: #27ae60; margin-top: 0; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; border-radius: 5px; }
+        .btn { padding: 12px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 5px; }
+        .btn-green { background: #27ae60; color: #fff; }
+        .btn-red { background: #c0392b; color: #fff; margin-top: 15px; }
+        .list-item { background: #1a1a1a; padding: 10px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div id="admin-login" class="card">
+        <h2>Admin Giriş</h2>
+        <input type="text" id="adm-user" placeholder="Admin Adı">
+        <input type="password" id="adm-pass" placeholder="Kod">
+        <button class="btn btn-green" onclick="loginAdmin()">GİRİŞ</button>
+    </div>
+
+    <div id="admin-content" style="display:none;">
+        <div class="card">
+            <h2>Yeni Hesab (Kod) Yarat</h2>
+            <input type="text" id="new-code" maxlength="6" placeholder="6 Rəqəmli Kod (məs: 123456)">
+            <input type="number" id="initial-bal" placeholder="Başlanğıc Balans (₼)">
+            <button class="btn btn-green" onclick="createAccount()">HESABI YARAT</button>
+        </div>
+
+        <div class="card">
+            <h2>Hesabları İdarə Et</h2>
+            <select id="acc-list" onchange="refreshView()"></select>
+            <p>Mövcud Balans: <b id="view-bal" style="color:#f1c40f;">0.00</b> ₼</p>
+            <input type="number" id="bal-change" placeholder="Məbləğ (+ əlavə edir, - çıxır)">
+            <button class="btn btn-green" onclick="updateBalance()">BALANSI YENİLƏ</button>
+            <button class="btn btn-red" onclick="deleteAccount()">HESABI SİL</button>
+        </div>
+
+        <div class="card">
+            <h2>Sistem Şansı: <span id="chance-text">50</span>%</h2>
+            <input type="range" id="chance-range" min="0" max="100" oninput="setChance(this.value)">
+        </div>
+    </div>
+
+    <script>
+        function loginAdmin() {
+            if(document.getElementById('adm-user').value === "Escobar" && document.getElementById('adm-pass').value === "ali1990") {
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+                refreshList();
+            } else { alert("Xəta!"); }
+        }
+
+        function createAccount() {
+            const code = document.getElementById('new-code').value;
+            const bal = parseFloat(document.getElementById('initial-bal').value) || 0;
+            if(code.length !== 6) return alert("Kod 6 rəqəmli olmalıdır!");
+            
+            let accounts = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            if(accounts[code]) return alert("Bu kod artıq istifadədədir!");
+            
+            accounts[code] = { balance: bal };
+            localStorage.setItem('game_accounts', JSON.stringify(accounts));
+            alert("Hesab yaradıldı!");
+            refreshList();
+        }
+
+        function refreshList() {
+            const accounts = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            const list = document.getElementById('acc-list');
+            list.innerHTML = "<option value=''>Hesab seçin...</option>";
+            for(let code in accounts) {
+                let opt = document.createElement('option');
+                opt.value = code;
+                opt.innerText = "Kod: " + code;
+                list.appendChild(opt);
+            }
+            document.getElementById('chance-text').innerText = localStorage.getItem('win_chance') || 50;
+        }
+
+        function refreshView() {
+            const code = document.getElementById('acc-list').value;
+            const accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            if(code && accounts[code]) {
+                document.getElementById('view-bal').innerText = accounts[code].balance.toFixed(2);
+            }
+        }
+
+        function updateBalance() {
+            const code = document.getElementById('acc-list').value;
+            const change = parseFloat(document.getElementById('bal-change').value);
+            if(!code || isNaN(change)) return;
+            
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            accounts[code].balance += change;
+            if(accounts[code].balance < 0) accounts[code].balance = 0;
+            
+            localStorage.setItem('game_accounts', JSON.stringify(accounts));
+            refreshView();
+            document.getElementById('bal-change').value = "";
+            alert("Balans güncəlləndi!");
+        }
+
+        function deleteAccount() {
+            const code = document.getElementById('acc-list').value;
+            if(!code || !confirm("Bu hesabı silmək istədiyinizə əminsiniz?")) return;
+            
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            delete accounts[code];
+            localStorage.setItem('game_accounts', JSON.stringify(accounts));
+            refreshList();
+            document.getElementById('view-bal').innerText = "0.00";
+            alert("Hesab silindi!");
+        }
+
+        function setChance(val) {
+            localStorage.setItem('win_chance', val);
+            document.getElementById('chance-text').innerText = val;
+        }
+    </script>
+</body>
+</html>
