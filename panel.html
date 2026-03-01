@@ -2,95 +2,87 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Escobar Control</title>
+    <title>Escobar Admin - Cloud</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; padding: 20px; }
-        .card { background: #111; padding: 20px; border-radius: 15px; border: 1px solid #222; max-width: 450px; margin: auto; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; border-radius: 8px; }
-        .btn { padding: 12px; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; width: 100%; background: #27ae60; color: white; }
-        .btn-red { background: #c0392b; margin-top: 10px; }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; }
+        .card { background: #111; padding: 20px; border-radius: 15px; border: 1px solid #333; max-width: 400px; margin: auto; }
+        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #27ae60; color: #fff; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="login" class="card">
         <h2>Admin Giriş</h2>
-        <input type="text" id="u" placeholder="Admin Adı">
+        <input type="text" id="u" placeholder="Admin">
         <input type="password" id="p" placeholder="Şifrə">
-        <button class="btn" onclick="auth()">GİRİŞ</button>
+        <button onclick="auth()">GİRİŞ</button>
     </div>
 
     <div id="panel" class="card" style="display:none;">
-        <h2 style="color:#27ae60;">Escobar Panel</h2>
-        <p>Yeni 6 rəqəmli kod:</p>
-        <input type="text" id="new-c" maxlength="6">
-        <input type="number" id="new-b" placeholder="Balans (₼)">
-        <button class="btn" onclick="add()">Hesab Yarat</button>
-        <hr style="border:1px solid #222; margin:20px 0;">
-        <select id="list" onchange="showBal()"></select>
-        <p>Mövcud Balans: <b id="vb" style="color:#f1c40f;">0.00</b> ₼</p>
-        <input type="number" id="mb" placeholder="Məbləğ (+ və ya -)">
-        <button class="btn" onclick="upd()">Balansı Dəyiş</button>
-        <button class="btn btn-red" onclick="del()">Hesabı Sil</button>
+        <h3>Canlı İdarəetmə</h3>
+        <input type="text" id="nc" maxlength="6" placeholder="6 rəqəmli kod">
+        <input type="number" id="nb" placeholder="Başlanğıc Balans">
+        <button onclick="add()">Hesab Yarat</button>
+        <hr>
+        <select id="list" onchange="loadBal()"></select>
+        <p>Balans: <b id="vb">0.00</b> ₼</p>
+        <input type="number" id="mb" placeholder="Məbləğ (+/-)">
+        <button onclick="upd()">Yenilə</button>
+        <button onclick="del()" style="background:red; margin-top:10px;">Hesabı Sil</button>
         <hr>
         <p>Uduş Şansı: <span id="ch">50</span>%</p>
-        <input type="range" id="rng" min="0" max="100" oninput="setCh(this.value)">
+        <input type="range" min="0" max="100" oninput="setCh(this.value)">
     </div>
 
     <script>
+        const firebaseConfig = { databaseURL: "https://escobar-bet-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         function auth() {
             if(document.getElementById('u').value === "Escobar" && document.getElementById('p').value === "ali1990") {
                 document.getElementById('login').style.display = 'none';
                 document.getElementById('panel').style.display = 'block';
-                load();
-            } else { alert("Səhvdir!"); }
+                refresh();
+            }
         }
 
         function add() {
-            let c = document.getElementById('new-c').value;
-            let b = parseFloat(document.getElementById('new-b').value) || 0;
-            if(c.length !== 6) return alert("6 rəqəmli olmalıdır!");
-            let accs = JSON.parse(localStorage.getItem('game_accounts')) || {};
-            accs[c] = {balance: b};
-            localStorage.setItem('game_accounts', JSON.stringify(accs));
-            load(); alert("Uğurla yaradıldı!");
+            let c = document.getElementById('nc').value;
+            let b = parseFloat(document.getElementById('nb').value) || 0;
+            if(c.length === 6) db.ref('users/' + c).set({ balance: b }, () => { alert("Kod yaradıldı!"); refresh(); });
         }
 
-        function load() {
-            let accs = JSON.parse(localStorage.getItem('game_accounts')) || {};
-            let sl = document.getElementById('list');
-            sl.innerHTML = "<option value=''>Hesab seç...</option>";
-            for(let k in accs) { sl.innerHTML += `<option value='${k}'>${k}</option>`; }
-            document.getElementById('ch').innerText = localStorage.getItem('win_chance') || 50;
+        function refresh() {
+            db.ref('users').on('value', (s) => {
+                let sl = document.getElementById('list');
+                sl.innerHTML = "<option>Seçin...</option>";
+                s.forEach((item) => { sl.innerHTML += `<option value="${item.key}">${item.key}</option>`; });
+            });
         }
 
-        function showBal() {
+        function loadBal() {
             let k = document.getElementById('list').value;
-            let accs = JSON.parse(localStorage.getItem('game_accounts'));
-            if(k) document.getElementById('vb').innerText = accs[k].balance.toFixed(2);
+            db.ref('users/' + k + '/balance').on('value', (s) => { document.getElementById('vb').innerText = s.val()?.toFixed(2) || "0.00"; });
         }
 
         function upd() {
             let k = document.getElementById('list').value;
             let m = parseFloat(document.getElementById('mb').value);
-            if(!k || isNaN(m)) return;
-            let accs = JSON.parse(localStorage.getItem('game_accounts'));
-            accs[k].balance += m;
-            localStorage.setItem('game_accounts', JSON.stringify(accs));
-            showBal(); alert("Güncəlləndi!");
+            db.ref('users/' + k + '/balance').once('value', (s) => {
+                db.ref('users/' + k).update({ balance: s.val() + m });
+            });
         }
 
         function del() {
-            let k = document.getElementById('list').value;
-            if(!k) return;
-            let accs = JSON.parse(localStorage.getItem('game_accounts'));
-            delete accs[k];
-            localStorage.setItem('game_accounts', JSON.stringify(accs));
-            load();
+            db.ref('users/' + document.getElementById('list').value).remove();
         }
 
         function setCh(v) {
-            localStorage.setItem('win_chance', v);
+            db.ref('win_chance').set(parseInt(v));
             document.getElementById('ch').innerText = v;
         }
     </script>
