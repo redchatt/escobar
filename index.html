@@ -3,39 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escobar Game</title>
+    <title>Escobar Game - Pro</title>
     <style>
-        body { font-family: sans-serif; background: #080808; color: #fff; text-align: center; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .box { width: 320px; padding: 25px; background: #111; border-radius: 20px; border: 1px solid #222; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #27ae60; font-size: 18px; text-align: center; }
-        .btn { padding: 12px; background: #27ae60; border: none; color: white; cursor: pointer; border-radius: 10px; width: 100%; font-weight: bold; margin-top: 10px; }
-        .balance { color: #f1c40f; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #080808; color: #fff; text-align: center; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .box { width: 350px; padding: 25px; background: #111; border-radius: 25px; border: 1px solid #222; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #333; background: #000; color: #27ae60; font-size: 20px; text-align: center; outline: none; }
+        .btn { padding: 14px; background: #27ae60; border: none; color: white; cursor: pointer; border-radius: 12px; font-weight: bold; width: 100%; transition: 0.3s; margin-top: 10px; }
+        .balance-label { color: #f1c40f; font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+        .arena { display: flex; justify-content: space-around; align-items: center; margin: 25px 0; }
+        .hand { font-size: 70px; }
+        .shake { animation: shakeHand 0.4s ease-in-out 3; }
+        @keyframes shakeHand { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-25px); } }
+        .bet-row { display: flex; justify-content: space-between; margin: 15px 0; }
+        .btn-bet { background: #1a1a1a; border: 1px solid #333; color: #aaa; width: 30%; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .btn-bet.active { border-color: #27ae60; color: #fff; background: #1e2a22; }
+        .choices { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .choice-btn { font-size: 35px; background: #1a1a1a; border: 1px solid #333; padding: 15px; border-radius: 50%; cursor: pointer; transition: 0.2s; }
+        .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #status { font-size: 18px; font-weight: bold; margin-top: 15px; min-height: 25px; }
         #game-area, #import-box { display: none; }
+        .update-link { font-size: 11px; color: #444; margin-top: 20px; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <div id="login-box" class="box">
-        <h2>Escobar Game</h2>
-        <input type="text" id="access-code" maxlength="6" placeholder="6 Rəqəmli Kod">
-        <button class="btn" onclick="login()">GİRİŞ</button>
-        <p style="font-size: 10px; color: #444; margin-top: 20px; cursor: pointer;" onclick="showImport()">Məlumatı Yenilə (Admin-dən gələn kod)</p>
+        <h2 style="color: #27ae60;">Escobar Game</h2>
+        <input type="text" id="access-code" maxlength="6" placeholder="Kodu daxil et">
+        <button class="btn" onclick="login()">DAXİL OL</button>
+        <div class="update-link" onclick="showImport()">Məlumatı Yenilə (Admin Kodu)</div>
     </div>
 
     <div id="import-box" class="box">
         <h3>Məlumatı Yenilə</h3>
-        <input type="text" id="import-data" placeholder="Adminin verdiyi uzun kodu bura yapışdır">
-        <button class="btn" onclick="importNow()">Yadda Saxla</button>
-        <button class="btn" style="background:#333" onclick="location.reload()">Geri</button>
+        <p style="font-size: 12px; color: #888;">Adminin kopyaladığı kodu bura yapışdırın:</p>
+        <input type="text" id="import-data" placeholder="Kodu bura yapışdır">
+        <button class="btn" onclick="importNow()">YADDA SAXLA</button>
+        <button class="btn" style="background:#333" onclick="location.reload()">GERİ</button>
     </div>
 
     <div id="game-area" class="box">
-        <div class="balance" id="user-balance">0.00 ₼</div>
-        <div id="st">Uğurlar!</div>
-        <button class="btn" style="background:#c0392b" onclick="location.reload()">ÇIXIŞ</button>
+        <div class="balance-label" id="user-balance">0.00 ₼</div>
+        <div class="bet-row">
+            <button class="btn-bet" id="bet02" onclick="setBet(0.20)">0.20 ₼</button>
+            <button class="btn-bet" id="bet05" onclick="setBet(0.50)">0.50 ₼</button>
+            <button class="btn-bet" id="bet10" onclick="setBet(1.00)">1.00 ₼</button>
+        </div>
+        <div class="arena">
+            <div id="u-hand" class="hand">✊</div>
+            <div style="font-size: 20px; color: #333;">VS</div>
+            <div id="b-hand" class="hand">✊</div>
+        </div>
+        <div id="status">Seçimini et!</div>
+        <div class="choices">
+            <button class="choice-btn" id="c1" onclick="play('daş')">✊</button>
+            <button class="choice-btn" id="c2" onclick="play('kağız')">✋</button>
+            <button class="choice-btn" id="c3" onclick="play('qayçı')">✌️</button>
+        </div>
+        <button class="btn" style="background:#222; margin-top: 25px; font-size: 12px;" onclick="location.reload()">ÇIXIŞ ET</button>
     </div>
 
     <script>
+        let currentCode = null;
+        let activeBet = 0;
+        const emojiMap = { 'daş': '✊', 'kağız': '✋', 'qayçı': '✌️' };
+
         function showImport() {
             document.getElementById('login-box').style.display = 'none';
             document.getElementById('import-box').style.display = 'block';
@@ -44,26 +76,88 @@
         function importNow() {
             const data = document.getElementById('import-data').value;
             try {
-                // Adminin göndərdiyi JSON-u yoxlayırıq
-                JSON.parse(data); 
-                localStorage.setItem('game_accounts', data);
-                alert("Məlumatlar yeniləndi! İndi giriş edə bilərsiniz.");
+                let parsed = JSON.parse(data); 
+                if(parsed.accs) {
+                    localStorage.setItem('game_accounts', JSON.stringify(parsed.accs));
+                    localStorage.setItem('win_chance', parsed.chance);
+                } else {
+                    localStorage.setItem('game_accounts', data);
+                }
+                alert("Məlumatlar və uduş şansı uğurla yeniləndi!");
                 location.reload();
             } catch(e) {
-                alert("Səhv kod yapışdırdınız!");
+                alert("Səhv kod daxil edilib!");
             }
         }
 
         function login() {
             const code = document.getElementById('access-code').value;
-            let accs = JSON.parse(localStorage.getItem('game_accounts')) || {};
-            if(accs[code]) {
+            let accounts = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            if(accounts[code]) {
+                currentCode = code;
                 document.getElementById('login-box').style.display = 'none';
                 document.getElementById('game-area').style.display = 'block';
-                document.getElementById('user-balance').innerText = accs[code].balance.toFixed(2) + " ₼";
-            } else {
-                alert("Kod tapılmadı! Admin-dən məlumatı yeniləməsini istəyin.");
-            }
+                updateUI();
+            } else { alert("Kod tapılmadı! Admin-dən məlumatı yeniləməsini istəyin."); }
+        }
+
+        function updateUI() {
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            document.getElementById('user-balance').innerText = accounts[currentCode].balance.toFixed(2) + " ₼";
+        }
+
+        function setBet(amt) {
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            if(accounts[currentCode].balance < amt) return alert("Balans kifayət deyil!");
+            activeBet = amt;
+            document.querySelectorAll('.btn-bet').forEach(b => b.classList.remove('active'));
+            if(amt === 0.20) document.getElementById('bet02').classList.add('active');
+            if(amt === 0.50) document.getElementById('bet05').classList.add('active');
+            if(amt === 1.00) document.getElementById('bet10').classList.add('active');
+        }
+
+        function play(userChoice) {
+            if(activeBet === 0) return alert("Mərc məbləğini seçin!");
+            let accounts = JSON.parse(localStorage.getItem('game_accounts'));
+            if(accounts[currentCode].balance < activeBet) return alert("Balansınız bitib!");
+
+            document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+            const uH = document.getElementById('u-hand'), bH = document.getElementById('b-hand'), st = document.getElementById('status');
+            
+            uH.innerText = "✊"; bH.innerText = "✊";
+            uH.classList.add('shake'); bH.classList.add('shake');
+            st.innerText = "Gözləyin...";
+
+            setTimeout(() => {
+                uH.classList.remove('shake'); bH.classList.remove('shake');
+                let chance = localStorage.getItem('win_chance') || 50;
+                let win = (Math.random() * 100) < chance;
+                let botChoice = "";
+
+                if(win) {
+                    botChoice = (userChoice === 'daş') ? 'qayçı' : (userChoice === 'kağız' ? 'daş' : 'kağız');
+                } else {
+                    botChoice = (userChoice === 'daş') ? 'kağız' : (userChoice === 'kağız' ? 'qayçı' : 'daş');
+                }
+
+                uH.innerText = emojiMap[userChoice];
+                bH.innerText = emojiMap[botChoice];
+                accounts[currentCode].balance -= activeBet;
+
+                if(win) {
+                    let prize = activeBet === 0.20 ? 0.50 : (activeBet === 0.50 ? 1.00 : 2.20);
+                    accounts[currentCode].balance += prize;
+                    st.innerText = "UDDUNUZ! +"+prize+"₼";
+                    st.style.color = "#2ecc71";
+                } else {
+                    st.innerText = "UDUZDUNUZ!";
+                    st.style.color = "#e74c3c";
+                }
+
+                localStorage.setItem('game_accounts', JSON.stringify(accounts));
+                updateUI();
+                document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
+            }, 1200);
         }
     </script>
 </body>
