@@ -3,115 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escobar Game - Live</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <title>Escobar Game</title>
     <style>
         body { font-family: sans-serif; background: #080808; color: #fff; text-align: center; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
         .box { width: 320px; padding: 25px; background: #111; border-radius: 20px; border: 1px solid #222; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #27ae60; font-size: 20px; text-align: center; }
-        .btn { padding: 12px; background: #27ae60; border: none; color: white; cursor: pointer; border-radius: 10px; width: 100%; font-weight: bold; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #27ae60; font-size: 18px; text-align: center; }
+        .btn { padding: 12px; background: #27ae60; border: none; color: white; cursor: pointer; border-radius: 10px; width: 100%; font-weight: bold; margin-top: 10px; }
         .balance { color: #f1c40f; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
-        .arena { display: flex; justify-content: space-around; font-size: 50px; margin: 20px 0; }
-        .shake { animation: shake 0.4s ease-in-out 3; }
-        @keyframes shake { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        .bet-row button { background: #1a1a1a; color: #888; border: 1px solid #333; padding: 8px; width: 30%; border-radius: 5px; cursor: pointer; }
-        .bet-row button.active { border-color: #27ae60; color: #fff; }
-        #game-area, #login-box { display: none; }
+        #game-area, #import-box { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="login-box" style="display:block;" class="box">
+    <div id="login-box" class="box">
         <h2>Escobar Game</h2>
-        <input type="text" id="access-code" maxlength="6" placeholder="KODU YAZ">
+        <input type="text" id="access-code" maxlength="6" placeholder="6 Rəqəmli Kod">
         <button class="btn" onclick="login()">GİRİŞ</button>
+        <p style="font-size: 10px; color: #444; margin-top: 20px; cursor: pointer;" onclick="showImport()">Məlumatı Yenilə (Admin-dən gələn kod)</p>
+    </div>
+
+    <div id="import-box" class="box">
+        <h3>Məlumatı Yenilə</h3>
+        <input type="text" id="import-data" placeholder="Adminin verdiyi uzun kodu bura yapışdır">
+        <button class="btn" onclick="importNow()">Yadda Saxla</button>
+        <button class="btn" style="background:#333" onclick="location.reload()">Geri</button>
     </div>
 
     <div id="game-area" class="box">
         <div class="balance" id="user-balance">0.00 ₼</div>
-        <div class="bet-row">
-            <button id="b02" onclick="setBet(0.20)">0.20</button>
-            <button id="b05" onclick="setBet(0.50)">0.50</button>
-            <button id="b10" onclick="setBet(1.00)">1.00</button>
-        </div>
-        <div class="arena">
-            <div id="uh">✊</div><div id="bh">✊</div>
-        </div>
-        <div id="st">Seçim et!</div>
-        <div style="margin-top:20px;">
-            <button onclick="play('daş')" style="font-size:30px; padding:10px; margin:5px; border-radius:50%; border:none; cursor:pointer;">✊</button>
-            <button onclick="play('kağız')" style="font-size:30px; padding:10px; margin:5px; border-radius:50%; border:none; cursor:pointer;">✋</button>
-            <button onclick="play('qayçı')" style="font-size:30px; padding:10px; margin:5px; border-radius:50%; border:none; cursor:pointer;">✌️</button>
-        </div>
+        <div id="st">Uğurlar!</div>
+        <button class="btn" style="background:#c0392b" onclick="location.reload()">ÇIXIŞ</button>
     </div>
 
     <script>
-        // CANLI BAZA AYARLARI (Firebase Free)
-        const firebaseConfig = { databaseURL: "https://escobar-bet-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        function showImport() {
+            document.getElementById('login-box').style.display = 'none';
+            document.getElementById('import-box').style.display = 'block';
+        }
 
-        let currentCode = null, activeBet = 0, userBal = 0;
-        const emoji = { 'daş': '✊', 'kağız': '✋', 'qayçı': '✌️' };
+        function importNow() {
+            const data = document.getElementById('import-data').value;
+            try {
+                // Adminin göndərdiyi JSON-u yoxlayırıq
+                JSON.parse(data); 
+                localStorage.setItem('game_accounts', data);
+                alert("Məlumatlar yeniləndi! İndi giriş edə bilərsiniz.");
+                location.reload();
+            } catch(e) {
+                alert("Səhv kod yapışdırdınız!");
+            }
+        }
 
         function login() {
             const code = document.getElementById('access-code').value;
-            db.ref('users/' + code).once('value', (s) => {
-                if(s.exists()) {
-                    currentCode = code;
-                    document.getElementById('login-box').style.display = 'none';
-                    document.getElementById('game-area').style.display = 'block';
-                    // Balansı canlı izlə
-                    db.ref('users/' + code + '/balance').on('value', (ss) => {
-                        userBal = ss.val();
-                        document.getElementById('user-balance').innerText = userBal.toFixed(2) + " ₼";
-                    });
-                } else { alert("Kod tapılmadı!"); }
-            });
-        }
-
-        function setBet(a) {
-            if(userBal < a) return alert("Balans azdır!");
-            activeBet = a;
-            document.querySelectorAll('.bet-row button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-        function play(uC) {
-            if(activeBet === 0) return alert("Mərc seç!");
-            if(userBal < activeBet) return alert("Balans yetmir!");
-
-            const uh = document.getElementById('uh'), bh = document.getElementById('bh'), st = document.getElementById('st');
-            uh.innerText = "✊"; bh.innerText = "✊";
-            uh.classList.add('shake'); bh.classList.add('shake');
-
-            db.ref('win_chance').once('value', (s) => {
-                let chance = s.val() || 50;
-                let win = Math.random() * 100 < chance;
-                let bC = "";
-
-                if(win) {
-                    bC = (uC === 'daş') ? 'qayçı' : (uC === 'kağız' ? 'daş' : 'kağız');
-                } else {
-                    bC = (uC === 'daş') ? 'kağız' : (uC === 'kağız' ? 'qayçı' : 'daş');
-                }
-
-                setTimeout(() => {
-                    uh.classList.remove('shake'); bh.classList.remove('shake');
-                    uh.innerText = emoji[uC]; bh.innerText = emoji[bC];
-                    
-                    let newBal = userBal - activeBet;
-                    if(win) {
-                        let prize = activeBet === 0.20 ? 0.50 : (activeBet === 0.50 ? 1.00 : 2.20);
-                        newBal += prize;
-                        st.innerText = "UDDUNUZ!"; st.style.color = "#2ecc71";
-                    } else {
-                        st.innerText = "UDUZDUNUZ!"; st.style.color = "#e74c3c";
-                    }
-                    db.ref('users/' + currentCode).update({ balance: newBal });
-                }, 1200);
-            });
+            let accs = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            if(accs[code]) {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+                document.getElementById('user-balance').innerText = accs[code].balance.toFixed(2) + " ₼";
+            } else {
+                alert("Kod tapılmadı! Admin-dən məlumatı yeniləməsini istəyin.");
+            }
         }
     </script>
 </body>
