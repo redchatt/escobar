@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escobar Game</title>
+    <title>Escobar Game - Live</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         body { background: #080808; color: #fff; font-family: sans-serif; text-align: center; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .box { width: 320px; padding: 25px; background: #111; border-radius: 20px; border: 1px solid #222; }
-        input { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #27ae60; text-align: center; border-radius: 8px; }
-        .btn { width: 100%; padding: 12px; background: #27ae60; border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; }
+        .box { width: 320px; padding: 25px; background: #111; border-radius: 20px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #27ae60; text-align: center; border-radius: 8px; font-size: 18px; outline: none; }
+        .btn { width: 100%; padding: 12px; background: #27ae60; border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 10px; }
         #game { display: none; }
-        .sync-link { font-size: 10px; color: #444; margin-top: 15px; cursor: pointer; }
+        .balance { color: #f1c40f; font-size: 35px; font-weight: bold; margin: 10px 0; }
+        .status { min-height: 25px; font-weight: bold; margin-bottom: 15px; }
+        .hands { font-size: 60px; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -18,66 +22,70 @@
     <div id="login" class="box">
         <h2 style="color:#27ae60">Escobar Game</h2>
         <input type="text" id="code" maxlength="6" placeholder="Kodu daxil et">
-        <button class="btn" onclick="start()">GİRİŞ</button>
-        <div class="sync-link" onclick="sync()">Sistem Kodunu Yapışdır (Admin-dən gələn)</div>
+        <button class="btn" onclick="login()">DAXİL OL</button>
     </div>
 
     <div id="game" class="box">
-        <h1 id="bal" style="color:#f1c40f">0.00 ₼</h1>
-        <p id="st">Seçim et!</p>
-        <div style="font-size:50px; margin:20px 0;">
-            <span onclick="play('daş')" style="cursor:pointer">✊</span>
-            <span onclick="play('kağız')" style="cursor:pointer">✋</span>
-            <span onclick="play('qayçı')" style="cursor:pointer">✌️</span>
+        <div id="bal" class="balance">0.00 ₼</div>
+        <div id="st" class="status">Seçim et!</div>
+        <div class="hands">
+            <span id="u-hand">✊</span> <small style="font-size:20px; color:#333;">VS</small> <span id="b-hand">✊</span>
         </div>
-        <button class="btn" style="background:#333" onclick="location.reload()">ÇIXIŞ</button>
+        <div style="display:flex; justify-content: space-around;">
+            <button onclick="play('daş')" style="font-size:30px; background:none; border:none; cursor:pointer;">✊</button>
+            <button onclick="play('kağız')" style="font-size:30px; background:none; border:none; cursor:pointer;">✋</button>
+            <button onclick="play('qayçı')" style="font-size:30px; background:none; border:none; cursor:pointer;">✌️</button>
+        </div>
+        <button class="btn" style="background:#333; margin-top: 25px;" onclick="location.reload()">ÇIXIŞ</button>
     </div>
 
     <script>
+        // SƏNİN FİREBASE LİNKİN
+        const firebaseConfig = { databaseURL: "https://escobar111-f8a80-default-rtdb.europe-west1.firebasedatabase.app/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         let cur = null;
-        function sync() {
-            let p = prompt("Admin-dən gələn uzun kodu bura yapışdırın:");
-            if(p) {
-                try {
-                    let d = JSON.parse(atob(p));
-                    localStorage.setItem('game_accounts', JSON.stringify(d.accs));
-                    localStorage.setItem('win_chance', d.win);
-                    alert("Sistem yeniləndi! İndi giriş edə bilərsiniz.");
-                } catch(e) { alert("Səhv kod!"); }
-            }
-        }
+        let userBal = 0;
 
-        function start() {
+        function login() {
             let c = document.getElementById('code').value;
-            let a = JSON.parse(localStorage.getItem('game_accounts')) || {};
-            if(a[c]) {
-                cur = c;
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('game').style.display = 'block';
-                document.getElementById('bal').innerText = a[cur].balance.toFixed(2) + " ₼";
-            } else { alert("Giriş kodunuz tapılmadı!"); }
+            db.ref('users/' + c).once('value', (s) => {
+                if(s.exists()) {
+                    cur = c;
+                    document.getElementById('login').style.display = 'none';
+                    document.getElementById('game').style.display = 'block';
+                    // Balansı canlı olaraq izləyirik
+                    db.ref('users/' + c + '/balance').on('value', (ss) => {
+                        userBal = ss.val();
+                        document.getElementById('bal').innerText = userBal.toFixed(2) + " ₼";
+                    });
+                } else { alert("Bu kod bazada yoxdur!"); }
+            });
         }
 
-        function play(u) {
-            let a = JSON.parse(localStorage.getItem('game_accounts'));
-            let ch = localStorage.getItem('win_chance') || 50;
-            let win = Math.random() * 100 < ch;
-            
-            // Sadələşdirilmiş məntiq: Əgər balans varsa çıx, udsa gəl (test üçün 1 manat)
-            if(a[cur].balance < 1) return alert("Balans yetmir!");
-            a[cur].balance -= 1;
-            
-            if(win) {
-                a[cur].balance += 2;
-                document.getElementById('st').innerText = "UDDUNUZ!";
-                document.getElementById('st').style.color = "#2ecc71";
-            } else {
-                document.getElementById('st').innerText = "UDUZDUNUZ!";
-                document.getElementById('st').style.color = "#e74c3c";
-            }
-            
-            localStorage.setItem('game_accounts', JSON.stringify(a));
-            document.getElementById('bal').innerText = a[cur].balance.toFixed(2) + " ₼";
+        function play(uC) {
+            db.ref('win_chance').once('value', (s) => {
+                let chance = s.val() || 50;
+                let fee = 1.00; // Hər oyunun qiyməti
+
+                if(userBal < fee) return alert("Balans kifayət deyil!");
+
+                let win = (Math.random() * 100) < chance;
+                let newBal = userBal - fee;
+                
+                if(win) {
+                    newBal += 2.00; // Udsa 2 manat qaytarır
+                    document.getElementById('st').innerText = "UDDUNUZ! +2₼";
+                    document.getElementById('st').style.color = "#2ecc71";
+                } else {
+                    document.getElementById('st').innerText = "UDUZDUNUZ!";
+                    document.getElementById('st').style.color = "#e74c3c";
+                }
+                
+                // Bazada balansı yeniləyirik
+                db.ref('users/' + cur).update({ balance: newBal });
+            });
         }
     </script>
 </body>
