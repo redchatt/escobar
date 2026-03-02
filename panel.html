@@ -2,51 +2,89 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Escobar Export</title>
+    <title>Escobar Admin - Secure</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; }
-        .card { background: #111; padding: 20px; border-radius: 15px; border: 1px solid #333; max-width: 400px; margin: auto; }
-        input { width: 100%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #27ae60; color: #fff; border: none; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        body { background: #050505; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #222; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: #27ae60; text-align: center; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; border-radius: 8px; outline: none; border-left: 3px solid #27ae60; }
+        .btn { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn:hover { background: #2ecc71; }
+        .btn-blue { background: #2980b9; }
+        .btn-blue:hover { background: #3498db; }
+        #admin-content { display: none; }
+        .info-text { font-size: 12px; color: #666; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Admin Panel</h2>
-        <input type="text" id="nc" maxlength="6" placeholder="Yeni 6 rəqəmli kod">
-        <input type="number" id="nb" placeholder="Balans">
-        <button onclick="add()">Hesabı Yarat</button>
-        <hr>
-        <button onclick="exportData()" style="background:#2980b9;">MƏLUMATI PAYLAŞ (WhatsApp üçün)</button>
-        <p style="font-size: 11px; color: #888;">Bu düyməyə basanda çıxan kodu kopyalayıb dostuna göndər.</p>
+    <div id="login-form" class="card">
+        <h2>Admin Giriş</h2>
+        <input type="text" id="adm-user" placeholder="Admin Adı">
+        <input type="password" id="adm-pass" placeholder="Şifrə">
+        <button class="btn" onclick="checkLogin()">DAXİL OL</button>
+    </div>
+
+    <div id="admin-content" class="card">
+        <h2>Escobar Panel</h2>
+        
+        <p style="margin-bottom: 5px; font-size: 14px;">Yeni Hesab:</p>
+        <input type="text" id="nc" maxlength="6" placeholder="6 rəqəmli kod">
+        <input type="number" id="nb" placeholder="Balans (AZN)">
+        <button class="btn" onclick="addAccount()">Hesabı Yarat</button>
+        
+        <hr style="border: 0; border-top: 1px solid #222; margin: 25px 0;">
+        
+        <button class="btn btn-blue" onclick="copyTransferCode()">MƏLUMATI PAYLAŞ</button>
+        <p class="info-text">Bu düyməni bas və kopyalanan kodu WhatsApp-la dostuna göndər ki, onun telefonu səni tanısın.</p>
+        
+        <button class="btn" style="background: #333; font-size: 12px;" onclick="location.reload()">ÇIXIŞ</button>
     </div>
 
     <script>
-        function add() {
-            let c = document.getElementById('nc').value;
-            let b = parseFloat(document.getElementById('nb').value) || 0;
-            if(c.length !== 6) return alert("6 rəqəm olmalıdır!");
+        // Giriş yoxlanışı
+        function checkLogin() {
+            const u = document.getElementById('adm-user').value;
+            const p = document.getElementById('adm-pass').value;
             
-            let accs = JSON.parse(localStorage.getItem('game_accounts')) || {};
-            accs[c] = { balance: b };
-            localStorage.setItem('game_accounts', JSON.stringify(accs));
-            alert("Yaradıldı! İndi 'Paylaş' düyməsinə basıb kodu dostuna göndər.");
+            if(u === "Escobar" && p === "ali1990") {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('admin-content').style.display = 'block';
+            } else {
+                alert("Giriş qadağandır! Məlumatlar səhvdir.");
+            }
         }
 
-        function exportData() {
+        // Hesab yaratma
+        function addAccount() {
+            let code = document.getElementById('nc').value;
+            let balance = parseFloat(document.getElementById('nb').value) || 0;
+            
+            if(code.length !== 6) return alert("Kod mütləq 6 rəqəm olmalıdır!");
+            
+            let accounts = JSON.parse(localStorage.getItem('game_accounts')) || {};
+            accounts[code] = { balance: balance };
+            localStorage.setItem('game_accounts', JSON.stringify(accounts));
+            
+            alert("Hesab yaradıldı: " + code);
+            document.getElementById('nc').value = "";
+            document.getElementById('nb').value = "";
+        }
+
+        // Məlumatı kopyalayıb ötürmək üçün kod çıxarma
+        function copyTransferCode() {
             let data = localStorage.getItem('game_accounts');
-            if(!data) return alert("Hələ heç bir hesab yaratmamısınız!");
+            if(!data || data === "{}") return alert("Heç bir hesab yaradılmayıb!");
             
-            // Kodu ekrana çıxarırıq ki kopyalasın
-            let tempInput = document.createElement("textarea");
-            tempInput.value = data;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
+            // Gizli textarea vasitəsilə kopyalama
+            const el = document.createElement('textarea');
+            el.value = data;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
             
-            alert("Bütün hesab məlumatları kopyalandı! İndi WhatsApp-da dostuna yapışdırıb göndər.");
+            alert("Transfer kodu kopyalandı! İndi WhatsApp-da dostuna göndər.");
         }
     </script>
 </body>
